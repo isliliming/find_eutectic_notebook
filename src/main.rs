@@ -5,7 +5,9 @@ use std::error::Error;
 use std::{fs, path::Path};
 use rfd::FileDialog;
 
-const DATA_FILE: &str = "lab_notebook.json";
+const DEFAULT_MOLECULES_FILE: &str = "molecules.json";
+const DEFAULT_SAMPLES_FILE: &str = "samples.json";
+const DEFAULT_OBSERVATIONS_FILE: &str = "observations.json";
 const DEFAULT_CSV_FILE: &str = "experiment_data.csv";
 const STATUS_SECONDS: i64 = 4;
 
@@ -124,47 +126,25 @@ struct Observation {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct AppData {
+struct MoleculesData {
     molecules: Vec<Molecule>,
-    samples: Vec<Sample>,
-    observations: Vec<Observation>,
     next_mol_id: u32,
-    next_sample_id: u32,
-    next_obs_id: u32,
 }
 
-impl Default for AppData {
+impl Default for MoleculesData {
     fn default() -> Self {
         Self {
             molecules: Vec::new(),
-            samples: Vec::new(),
-            observations: Vec::new(),
             next_mol_id: 1,
-            next_sample_id: 1,
-            next_obs_id: 1,
         }
     }
 }
 
-impl AppData {
+impl MoleculesData {
     fn normalise_ids(&mut self) {
         let max_mol = self.molecules.iter().map(|m| m.id).max().unwrap_or(0);
-        let max_sample = self.samples.iter().map(|s| s.id).max().unwrap_or(0);
-        let max_obs = self
-            .observations
-            .iter()
-            .map(|o| o.id)
-            .max()
-            .unwrap_or(0);
-
         if self.next_mol_id <= max_mol {
             self.next_mol_id = max_mol + 1;
-        }
-        if self.next_sample_id <= max_sample {
-            self.next_sample_id = max_sample + 1;
-        }
-        if self.next_obs_id <= max_obs {
-            self.next_obs_id = max_obs + 1;
         }
     }
 
@@ -173,11 +153,59 @@ impl AppData {
         self.next_mol_id += 1;
         id
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SamplesData {
+    samples: Vec<Sample>,
+    next_sample_id: u32,
+}
+
+impl Default for SamplesData {
+    fn default() -> Self {
+        Self {
+            samples: Vec::new(),
+            next_sample_id: 1,
+        }
+    }
+}
+
+impl SamplesData {
+    fn normalise_ids(&mut self) {
+        let max_sample = self.samples.iter().map(|s| s.id).max().unwrap_or(0);
+        if self.next_sample_id <= max_sample {
+            self.next_sample_id = max_sample + 1;
+        }
+    }
 
     fn alloc_sample_id(&mut self) -> u32 {
         let id = self.next_sample_id;
         self.next_sample_id += 1;
         id
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ObservationsData {
+    observations: Vec<Observation>,
+    next_obs_id: u32,
+}
+
+impl Default for ObservationsData {
+    fn default() -> Self {
+        Self {
+            observations: Vec::new(),
+            next_obs_id: 1,
+        }
+    }
+}
+
+impl ObservationsData {
+    fn normalise_ids(&mut self) {
+        let max_obs = self.observations.iter().map(|o| o.id).max().unwrap_or(0);
+        if self.next_obs_id <= max_obs {
+            self.next_obs_id = max_obs + 1;
+        }
     }
 
     fn alloc_obs_id(&mut self) -> u32 {
@@ -228,6 +256,10 @@ struct UiState {
     current_tab: Tab,
     search_query: String,
 
+    molecules_file: String,
+    samples_file: String,
+    observations_file: String,
+
     new_mol_name: String,
     new_mol_short: String,
     new_mol_cas: String,
@@ -259,6 +291,10 @@ impl Default for UiState {
             current_tab: Tab::Molecules,
             search_query: String::new(),
 
+            molecules_file: DEFAULT_MOLECULES_FILE.to_string(),
+            samples_file: DEFAULT_SAMPLES_FILE.to_string(),
+            observations_file: DEFAULT_OBSERVATIONS_FILE.to_string(),
+
             new_mol_name: String::new(),
             new_mol_short: String::new(),
             new_mol_cas: String::new(),
@@ -287,7 +323,9 @@ impl Default for UiState {
 }
 
 struct LabApp {
-    data: AppData,
+    molecules_data: MoleculesData,
+    samples_data: SamplesData,
+    observations_data: ObservationsData,
     ui: UiState,
     status: Option<StatusMessage>,
 }
@@ -299,24 +337,82 @@ impl LabApp {
     }
 
     fn load() -> Self {
-        let mut data = match fs::read_to_string(DATA_FILE) {
+        let ui = UiState::default();
+        let mut molecules_data = match fs::read_to_string(&ui.molecules_file) {
             Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-            Err(_) => AppData::default(),
+            Err(_) => MoleculesData::default(),
         };
-        data.normalise_ids();
+        molecules_data.normalise_ids();
+
+        let mut samples_data = match fs::read_to_string(&ui.samples_file) {
+            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+            Err(_) => SamplesData::default(),
+        };
+        samples_data.normalise_ids();
+
+        let mut observations_data = match fs::read_to_string(&ui.observations_file) {
+            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+            Err(_) => ObservationsData::default(),
+        };
+        observations_data.normalise_ids();
+
         let app = Self {
-            data,
-            ui: UiState::default(),
+            molecules_data,
+            samples_data,
+            observations_data,
+            ui,
             status: None,
         };
-        app.save_data();
+        app.save_all_data();
         app
     }
 
-    fn save_data(&self) {
-        if let Ok(json) = serde_json::to_string_pretty(&self.data) {
-            let _ = fs::write(DATA_FILE, json);
+    fn save_molecules(&self) {
+        if let Ok(json) = serde_json::to_string_pretty(&self.molecules_data) {
+            let _ = fs::write(&self.ui.molecules_file, json);
         }
+    }
+
+    fn save_samples(&self) {
+        if let Ok(json) = serde_json::to_string_pretty(&self.samples_data) {
+            let _ = fs::write(&self.ui.samples_file, json);
+        }
+    }
+
+    fn save_observations(&self) {
+        if let Ok(json) = serde_json::to_string_pretty(&self.observations_data) {
+            let _ = fs::write(&self.ui.observations_file, json);
+        }
+    }
+
+    fn save_all_data(&self) {
+        self.save_molecules();
+        self.save_samples();
+        self.save_observations();
+    }
+
+    fn load_molecules(&mut self) {
+        self.molecules_data = match fs::read_to_string(&self.ui.molecules_file) {
+            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+            Err(_) => MoleculesData::default(),
+        };
+        self.molecules_data.normalise_ids();
+    }
+
+    fn load_samples(&mut self) {
+        self.samples_data = match fs::read_to_string(&self.ui.samples_file) {
+            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+            Err(_) => SamplesData::default(),
+        };
+        self.samples_data.normalise_ids();
+    }
+
+    fn load_observations(&mut self) {
+        self.observations_data = match fs::read_to_string(&self.ui.observations_file) {
+            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+            Err(_) => ObservationsData::default(),
+        };
+        self.observations_data.normalise_ids();
     }
 
     fn show_status(&mut self, msg: impl Into<String>, kind: StatusKind) {
@@ -350,7 +446,7 @@ impl LabApp {
     }
 
     fn molecules_by_role(&self, role: Role) -> Vec<(u32, String)> {
-        self.data
+        self.molecules_data
             .molecules
             .iter()
             .filter(|m| m.role == role)
@@ -412,7 +508,7 @@ impl LabApp {
         };
 
         let molecule = Molecule {
-            id: self.data.alloc_mol_id(),
+            id: self.molecules_data.alloc_mol_id(),
             name: name.to_string(),
             short_name: short.to_string(),
             cas_number: cas.to_string(),
@@ -423,8 +519,8 @@ impl LabApp {
             webpage: self.ui.new_mol_link.trim().to_string(),
         };
 
-        self.data.molecules.push(molecule);
-        self.save_data();
+        self.molecules_data.molecules.push(molecule);
+        self.save_molecules();
         self.show_status("Molecule added.", StatusKind::Ok);
 
         self.ui.new_mol_name.clear();
@@ -456,7 +552,7 @@ impl LabApp {
             return;
         }
 
-        let (c1_id, c1_name, c1_mw) = match self.data.molecules.iter().find(|m| m.id == c1_id)
+        let (c1_id, c1_name, c1_mw) = match self.molecules_data.molecules.iter().find(|m| m.id == c1_id)
         {
             Some(m) => (m.id, m.short_name.clone(), m.mw),
             None => {
@@ -464,7 +560,7 @@ impl LabApp {
                 return;
             }
         };
-        let (c2_id, c2_name, c2_mw) = match self.data.molecules.iter().find(|m| m.id == c2_id)
+        let (c2_id, c2_name, c2_mw) = match self.molecules_data.molecules.iter().find(|m| m.id == c2_id)
         {
             Some(m) => (m.id, m.short_name.clone(), m.mw),
             None => {
@@ -498,7 +594,7 @@ impl LabApp {
         let moles2 = mass2 / c2_mw;
         let real_ratio = if moles1 > 0.0 { Some(moles2 / moles1) } else { None };
 
-        let sample_id = self.data.alloc_sample_id();
+        let sample_id = self.samples_data.alloc_sample_id();
         let sample = Sample {
             id: sample_id,
             type_: SampleType::Binary,
@@ -513,8 +609,8 @@ impl LabApp {
             created_at: Utc::now(),
         };
 
-        self.data.samples.push(sample);
-        self.save_data();
+        self.samples_data.samples.push(sample);
+        self.save_samples();
         self.show_status("Binary sample saved.", StatusKind::Ok);
         self.ui.prep_mass_c2_actual.clear();
     }
@@ -527,7 +623,7 @@ impl LabApp {
                 return;
             }
         };
-        let (c1_id, c1_name) = match self.data.molecules.iter().find(|m| m.id == c1_id) {
+        let (c1_id, c1_name) = match self.molecules_data.molecules.iter().find(|m| m.id == c1_id) {
             Some(m) => (m.id, m.short_name.clone()),
             None => {
                 self.show_status("Selected molecule not found.", StatusKind::Error);
@@ -542,7 +638,7 @@ impl LabApp {
             }
         };
 
-        let sample_id = self.data.alloc_sample_id();
+        let sample_id = self.samples_data.alloc_sample_id();
         let sample = Sample {
             id: sample_id,
             type_: SampleType::Pure,
@@ -557,8 +653,8 @@ impl LabApp {
             created_at: Utc::now(),
         };
 
-        self.data.samples.push(sample);
-        self.save_data();
+        self.samples_data.samples.push(sample);
+        self.save_samples();
         self.show_status("Pure sample saved.", StatusKind::Ok);
     }
 
@@ -571,9 +667,9 @@ impl LabApp {
             }
         };
 
-        let obs_id = self.data.alloc_obs_id();
+        let obs_id = self.observations_data.alloc_obs_id();
         let note = self.ui.test_note.trim();
-        self.data.observations.push(Observation {
+        self.observations_data.observations.push(Observation {
             id: obs_id,
             sample_id,
             temperature: temp,
@@ -585,7 +681,7 @@ impl LabApp {
                 Some(note.to_string())
             },
         });
-        self.save_data();
+        self.save_observations();
         self.show_status("Observation recorded.", StatusKind::Ok);
     }
 
@@ -611,7 +707,7 @@ impl LabApp {
             "Note",
         ])?;
 
-        for obs in &self.data.observations {
+        for obs in &self.observations_data.observations {
             if let Some(filter_ids) = only_obs_ids {
                 if !filter_ids.contains(&obs.id) {
                     continue;
@@ -621,7 +717,7 @@ impl LabApp {
             let temp_str = format!("{:.2}", obs.temperature);
             let result_str = obs.result.label().to_string();
 
-            let row = if let Some(sample) = self.data.samples.iter().find(|s| s.id == obs.sample_id)
+            let row = if let Some(sample) = self.samples_data.samples.iter().find(|s| s.id == obs.sample_id)
             {
                 let type_str = sample.type_.label().to_string();
                 let c2_name = sample.c2_name.clone().unwrap_or_default();
@@ -696,6 +792,25 @@ impl LabApp {
 
     fn tab_molecules(&mut self, ui: &mut egui::Ui) {
         egui::Frame::group(ui.style()).show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.heading("Molecules");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Change file…").clicked() {
+                        if let Some(path) = FileDialog::new()
+                            .add_filter("JSON", &["json"])
+                            .set_file_name(&self.ui.molecules_file)
+                            .pick_file()
+                        {
+                            self.ui.molecules_file = path.to_string_lossy().to_string();
+                            self.load_molecules();
+                            self.show_status("Molecules file loaded.", StatusKind::Ok);
+                        }
+                    }
+                    ui.label("File:");
+                    ui.text_edit_singleline(&mut self.ui.molecules_file);
+                });
+            });
+            ui.separator();
             ui.heading("Register New Molecule");
             ui.add_space(6.0);
 
@@ -769,11 +884,12 @@ impl LabApp {
                         ui.strong("MW");
                         ui.strong("Role");
                         ui.strong("Supplier");
+                        ui.strong("Webpage");
                         ui.strong("Action");
                         ui.end_row();
 
                         let mut delete_id = None;
-                        for mol in self.data.molecules.iter().filter(|m| {
+                        for mol in self.molecules_data.molecules.iter().filter(|m| {
                             query.is_empty()
                                 || m.name.to_lowercase().contains(&query)
                                 || m.short_name.to_lowercase().contains(&query)
@@ -784,6 +900,11 @@ impl LabApp {
                             ui.label(format!("{:.3}", mol.mw));
                             ui.label(mol.role.short());
                             ui.label(&mol.supplier);
+                            if !mol.webpage.is_empty() {
+                                ui.hyperlink_to(&mol.webpage, &mol.webpage);
+                            } else {
+                                ui.label("-");
+                            }
                             if ui.button("Delete").clicked() {
                                 delete_id = Some(mol.id);
                             }
@@ -791,8 +912,8 @@ impl LabApp {
                         }
 
                         if let Some(id) = delete_id {
-                            self.data.molecules.retain(|m| m.id != id);
-                            self.save_data();
+                            self.molecules_data.molecules.retain(|m| m.id != id);
+                            self.save_molecules();
                             self.show_status("Molecule deleted.", StatusKind::Ok);
                         }
                     });
@@ -802,7 +923,25 @@ impl LabApp {
 
     fn tab_weighing(&mut self, ui: &mut egui::Ui) {
         egui::Frame::group(ui.style()).show(ui, |ui| {
-            ui.heading("Sample Preparation / Weighting");
+            ui.horizontal(|ui| {
+                ui.heading("Sample Preparation / Weighting");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Change file…").clicked() {
+                        if let Some(path) = FileDialog::new()
+                            .add_filter("JSON", &["json"])
+                            .set_file_name(&self.ui.samples_file)
+                            .pick_file()
+                        {
+                            self.ui.samples_file = path.to_string_lossy().to_string();
+                            self.load_samples();
+                            self.show_status("Samples file loaded.", StatusKind::Ok);
+                        }
+                    }
+                    ui.label("File:");
+                    ui.text_edit_singleline(&mut self.ui.samples_file);
+                });
+            });
+            ui.separator();
             ui.add_space(6.0);
 
             ui.horizontal(|ui| {
@@ -819,14 +958,14 @@ impl LabApp {
                     let don_opts = self.molecules_by_role(Role::HBD);
 
                     let acc_label = self
-                        .data
+                        .molecules_data
                         .molecules
                         .iter()
                         .find(|m| Some(m.id) == self.ui.prep_c1_id)
                         .map(|m| m.short_name.clone())
                         .unwrap_or_else(|| "Select acceptor".to_string());
                     let don_label = self
-                        .data
+                        .molecules_data
                         .molecules
                         .iter()
                         .find(|m| Some(m.id) == self.ui.prep_c2_id)
@@ -883,8 +1022,8 @@ impl LabApp {
                     if let (Some(c1_id), Some(c2_id)) = (self.ui.prep_c1_id, self.ui.prep_c2_id)
                     {
                         if let (Some(c1), Some(c2)) = (
-                            self.data.molecules.iter().find(|m| m.id == c1_id),
-                            self.data.molecules.iter().find(|m| m.id == c2_id),
+                            self.molecules_data.molecules.iter().find(|m| m.id == c1_id),
+                            self.molecules_data.molecules.iter().find(|m| m.id == c2_id),
                         ) {
                             let p1 = Self::parse_f64(&self.ui.prep_parts_c1);
                             let p2 = Self::parse_f64(&self.ui.prep_parts_c2);
@@ -947,14 +1086,14 @@ impl LabApp {
                 }
                 SampleType::Pure => {
                     let all_opts: Vec<(u32, String)> = self
-                        .data
+                        .molecules_data
                         .molecules
                         .iter()
                         .map(|m| (m.id, m.short_name.clone()))
                         .collect();
 
                     let cur_label = self
-                        .data
+                        .molecules_data
                         .molecules
                         .iter()
                         .find(|m| Some(m.id) == self.ui.prep_c1_id)
@@ -1005,7 +1144,7 @@ impl LabApp {
                         ui.end_row();
 
                         let mut delete_id = None;
-                        for sample in self.data.samples.iter().rev() {
+                        for sample in self.samples_data.samples.iter().rev() {
                             ui.label(format!("#{}", sample.id));
                             match sample.type_ {
                                 SampleType::Binary => {
@@ -1038,9 +1177,10 @@ impl LabApp {
                         }
 
                         if let Some(id) = delete_id {
-                            self.data.samples.retain(|s| s.id != id);
-                            self.data.observations.retain(|o| o.sample_id != id);
-                            self.save_data();
+                            self.samples_data.samples.retain(|s| s.id != id);
+                            self.observations_data.observations.retain(|o| o.sample_id != id);
+                            self.save_samples();
+                            self.save_observations();
                             self.show_status("Sample deleted.", StatusKind::Ok);
                         }
                     });
@@ -1050,18 +1190,36 @@ impl LabApp {
 
     fn tab_testing(&mut self, ui: &mut egui::Ui) {
         egui::Frame::group(ui.style()).show(ui, |ui| {
-            ui.heading("Phase Observation");
+            ui.horizontal(|ui| {
+                ui.heading("Phase Observation");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Change file…").clicked() {
+                        if let Some(path) = FileDialog::new()
+                            .add_filter("JSON", &["json"])
+                            .set_file_name(&self.ui.observations_file)
+                            .pick_file()
+                        {
+                            self.ui.observations_file = path.to_string_lossy().to_string();
+                            self.load_observations();
+                            self.show_status("Observations file loaded.", StatusKind::Ok);
+                        }
+                    }
+                    ui.label("File:");
+                    ui.text_edit_singleline(&mut self.ui.observations_file);
+                });
+            });
+            ui.separator();
             ui.add_space(6.0);
 
             let selected_label = self
                 .ui
                 .test_selected_sample_id
-                .and_then(|id| self.data.samples.iter().find(|s| s.id == id))
+                .and_then(|id| self.samples_data.samples.iter().find(|s| s.id == id))
                 .map(|s| Self::sample_label(s))
                 .unwrap_or_else(|| "Select sample".to_string());
 
             let sample_options: Vec<(u32, String)> = self
-                .data
+                .samples_data
                 .samples
                 .iter()
                 .rev()
@@ -1080,7 +1238,7 @@ impl LabApp {
 
             if let Some(sample_id) = self.ui.test_selected_sample_id {
                 let summary = self
-                    .data
+                    .samples_data
                     .samples
                     .iter()
                     .find(|s| s.id == sample_id)
@@ -1123,6 +1281,20 @@ impl LabApp {
             ui.horizontal(|ui| {
                 ui.heading("Experiment History");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Change file…").clicked() {
+                        if let Some(path) = FileDialog::new()
+                            .add_filter("JSON", &["json"])
+                            .set_file_name(&self.ui.observations_file)
+                            .pick_file()
+                        {
+                            self.ui.observations_file = path.to_string_lossy().to_string();
+                            self.load_observations();
+                            self.show_status("Observations file loaded.", StatusKind::Ok);
+                        }
+                    }
+                    ui.label("File:");
+                    ui.text_edit_singleline(&mut self.ui.observations_file);
+                    ui.separator();
                     if ui.button("Export selected…").clicked() {
                         if !self.ui.export_selected_obs_ids.is_empty() {
                             if let Some(path) = FileDialog::new()
@@ -1187,8 +1359,8 @@ impl LabApp {
                         ui.end_row();
 
                         let mut delete_id = None;
-                        for obs in self.data.observations.iter().rev() {
-                            let sample = self.data.samples.iter().find(|s| s.id == obs.sample_id);
+                        for obs in self.observations_data.observations.iter().rev() {
+                            let sample = self.samples_data.samples.iter().find(|s| s.id == obs.sample_id);
                             if let Some(sample) = sample {
                                 ui.label(format!("#{}", sample.id));
                                 match sample.type_ {
@@ -1240,8 +1412,8 @@ impl LabApp {
                         }
 
                         if let Some(id) = delete_id {
-                            self.data.observations.retain(|o| o.id != id);
-                            self.save_data();
+                            self.observations_data.observations.retain(|o| o.id != id);
+                            self.save_observations();
                             self.show_status("Observation deleted.", StatusKind::Ok);
                         }
                     });

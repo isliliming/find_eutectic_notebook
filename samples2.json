@@ -1,0 +1,70 @@
+{
+  "samples": [
+    {
+      "id": 1,
+      "type": "Binary",
+      "c1_id": 1,
+      "c1_name": "bif",
+      "c1_mass": 12.0,
+      "c2_id": 3,
+      "c2_name": "cur",
+      "c2_mass": 164.0,
+      "ratio_label": "2:8",
+      "real_molar_ratio": 3.9555607662573893,
+      "created_at": "2026-01-27T21:42:14.733156Z"
+    },
+    {
+      "id": 2,
+      "type": "Binary",
+      "c1_id": 1,
+      "c1_name": "bif",
+      "c1_mass": 3.2,
+      "c2_id": 3,
+      "c2_name": "cur",
+      "c2_mass": 34.78,
+      "ratio_label": "2:8",
+      "real_molar_ratio": 3.145756176458049,
+      "created_at": "2026-01-27T21:42:26.699450Z"
+    },
+    {
+      "id": 3,
+      "type": "Pure",
+      "c1_id": 3,
+      "c1_name": "cur",
+      "c1_mass": 23.4,
+      "c2_id": null,
+      "c2_name": null,
+      "c2_mass": null,
+      "ratio_label": "Pure",
+      "real_molar_ratio": null,
+      "created_at": "2026-01-27T21:42:40.315893Z"
+    },
+    {
+      "id": 4,
+      "type": "Pure",
+      "c1_id": 1,
+      "c1_name": "bif",
+      "c1_mass": 344.2,
+      "c2_id": null,
+      "c2_name": null,
+      "c2_mass": null,
+      "ratio_label": "Pure",
+      "real_molar_ratio": null,
+      "created_at": "2026-01-27T21:42:55.549869Z"
+    },
+    {
+      "id": 5,
+      "type": "Pure",
+      "c1_id": 1,
+      "c1_name": "bif",
+      "c1_mass": 22.0,
+      "c2_id": null,
+      "c2_name": null,
+      "c2_mass": null,
+      "ratio_label": "Pure",
+      "real_molar_ratio": null,
+      "created_at": "2026-01-27T21:44:07.865348Z"
+    }
+  ],
+  "next_sample_id": 6
+}
