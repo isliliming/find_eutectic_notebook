@@ -485,6 +485,23 @@ impl LabApp {
         "N/A".to_string()
     }
 
+    fn file_selector_row(ui: &mut egui::Ui, current_path: &mut String) -> bool {
+        let mut changed = false;
+        if ui.button("Change file…").clicked() {
+            if let Some(path) = FileDialog::new()
+                .add_filter("JSON", &["json"])
+                .set_file_name(current_path)
+                .pick_file()
+            {
+                *current_path = path.to_string_lossy().to_string();
+                changed = true;
+            }
+        }
+        ui.label("File:");
+        ui.text_edit_singleline(current_path);
+        changed
+    }
+
     fn add_molecule(&mut self) {
         let name = self.ui.new_mol_name.trim();
         let short = self.ui.new_mol_short.trim();
@@ -795,19 +812,13 @@ impl LabApp {
             ui.horizontal(|ui| {
                 ui.heading("Molecules");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Change file…").clicked() {
-                        if let Some(path) = FileDialog::new()
-                            .add_filter("JSON", &["json"])
-                            .set_file_name(&self.ui.molecules_file)
-                            .pick_file()
-                        {
-                            self.ui.molecules_file = path.to_string_lossy().to_string();
-                            self.load_molecules();
-                            self.show_status("Molecules file loaded.", StatusKind::Ok);
-                        }
+                    if Self::file_selector_row(ui, &mut self.ui.molecules_file) {
+                        self.load_molecules();
+                        self.ui.prep_c1_id = None;
+                        self.ui.prep_c2_id = None;
+                        self.ui.prep_theoretical_text.clear();
+                        self.show_status("Molecules file loaded.", StatusKind::Ok);
                     }
-                    ui.label("File:");
-                    ui.text_edit_singleline(&mut self.ui.molecules_file);
                 });
             });
             ui.separator();
@@ -926,19 +937,11 @@ impl LabApp {
             ui.horizontal(|ui| {
                 ui.heading("Sample Preparation / Weighting");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Change file…").clicked() {
-                        if let Some(path) = FileDialog::new()
-                            .add_filter("JSON", &["json"])
-                            .set_file_name(&self.ui.samples_file)
-                            .pick_file()
-                        {
-                            self.ui.samples_file = path.to_string_lossy().to_string();
-                            self.load_samples();
-                            self.show_status("Samples file loaded.", StatusKind::Ok);
-                        }
+                    if Self::file_selector_row(ui, &mut self.ui.samples_file) {
+                        self.load_samples();
+                        self.ui.test_selected_sample_id = None;
+                        self.show_status("Samples file loaded.", StatusKind::Ok);
                     }
-                    ui.label("File:");
-                    ui.text_edit_singleline(&mut self.ui.samples_file);
                 });
             });
             ui.separator();
@@ -1193,19 +1196,11 @@ impl LabApp {
             ui.horizontal(|ui| {
                 ui.heading("Phase Observation");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Change file…").clicked() {
-                        if let Some(path) = FileDialog::new()
-                            .add_filter("JSON", &["json"])
-                            .set_file_name(&self.ui.observations_file)
-                            .pick_file()
-                        {
-                            self.ui.observations_file = path.to_string_lossy().to_string();
-                            self.load_observations();
-                            self.show_status("Observations file loaded.", StatusKind::Ok);
-                        }
+                    if Self::file_selector_row(ui, &mut self.ui.observations_file) {
+                        self.load_observations();
+                        self.ui.export_selected_obs_ids.clear();
+                        self.show_status("Observations file loaded.", StatusKind::Ok);
                     }
-                    ui.label("File:");
-                    ui.text_edit_singleline(&mut self.ui.observations_file);
                 });
             });
             ui.separator();
@@ -1281,19 +1276,11 @@ impl LabApp {
             ui.horizontal(|ui| {
                 ui.heading("Experiment History");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Change file…").clicked() {
-                        if let Some(path) = FileDialog::new()
-                            .add_filter("JSON", &["json"])
-                            .set_file_name(&self.ui.observations_file)
-                            .pick_file()
-                        {
-                            self.ui.observations_file = path.to_string_lossy().to_string();
-                            self.load_observations();
-                            self.show_status("Observations file loaded.", StatusKind::Ok);
-                        }
+                    if Self::file_selector_row(ui, &mut self.ui.observations_file) {
+                        self.load_observations();
+                        self.ui.export_selected_obs_ids.clear();
+                        self.show_status("Observations file loaded.", StatusKind::Ok);
                     }
-                    ui.label("File:");
-                    ui.text_edit_singleline(&mut self.ui.observations_file);
                     ui.separator();
                     if ui.button("Export selected…").clicked() {
                         if !self.ui.export_selected_obs_ids.is_empty() {
