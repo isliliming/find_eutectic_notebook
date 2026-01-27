@@ -2,14 +2,31 @@ use chrono::{DateTime, Utc};
 use eframe::egui;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use std::{fs, path::Path};
+use std::{env, fs, path::{Path, PathBuf}};
 use rfd::FileDialog;
 
-const DEFAULT_MOLECULES_FILE: &str = "lab_data/molecules.json";
-const DEFAULT_SAMPLES_FILE: &str = "lab_data/samples.json";
-const DEFAULT_OBSERVATIONS_FILE: &str = "lab_data/observations.json";
+const DATA_DIR_NAME: &str = "lab_data";
+const MOLECULES_FILE_NAME: &str = "molecules.json";
+const SAMPLES_FILE_NAME: &str = "samples.json";
+const OBSERVATIONS_FILE_NAME: &str = "observations.json";
 const DEFAULT_CSV_FILE: &str = "experiment_data.csv";
 const STATUS_SECONDS: i64 = 4;
+
+fn get_exe_dir() -> PathBuf {
+    env::current_exe()
+        .ok()
+        .and_then(|exe_path| exe_path.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn get_data_file_path(filename: &str) -> String {
+    let exe_dir = get_exe_dir();
+    exe_dir
+        .join(DATA_DIR_NAME)
+        .join(filename)
+        .to_string_lossy()
+        .to_string()
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 enum Role {
@@ -291,9 +308,9 @@ impl Default for UiState {
             current_tab: Tab::Molecules,
             search_query: String::new(),
 
-            molecules_file: DEFAULT_MOLECULES_FILE.to_string(),
-            samples_file: DEFAULT_SAMPLES_FILE.to_string(),
-            observations_file: DEFAULT_OBSERVATIONS_FILE.to_string(),
+            molecules_file: get_data_file_path(MOLECULES_FILE_NAME),
+            samples_file: get_data_file_path(SAMPLES_FILE_NAME),
+            observations_file: get_data_file_path(OBSERVATIONS_FILE_NAME),
 
             new_mol_name: String::new(),
             new_mol_short: String::new(),
@@ -338,6 +355,12 @@ impl LabApp {
 
     fn load() -> Self {
         let ui = UiState::default();
+        
+        // Ensure lab_data directory exists before any file operations
+        Self::ensure_parent_dir(&ui.molecules_file);
+        Self::ensure_parent_dir(&ui.samples_file);
+        Self::ensure_parent_dir(&ui.observations_file);
+        
         let mut molecules_data = match fs::read_to_string(&ui.molecules_file) {
             Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
             Err(_) => MoleculesData::default(),
