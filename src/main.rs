@@ -5,9 +5,9 @@ use std::error::Error;
 use std::{fs, path::Path};
 use rfd::FileDialog;
 
-const DEFAULT_MOLECULES_FILE: &str = "molecules.json";
-const DEFAULT_SAMPLES_FILE: &str = "samples.json";
-const DEFAULT_OBSERVATIONS_FILE: &str = "observations.json";
+const DEFAULT_MOLECULES_FILE: &str = "lab_data/molecules.json";
+const DEFAULT_SAMPLES_FILE: &str = "lab_data/samples.json";
+const DEFAULT_OBSERVATIONS_FILE: &str = "lab_data/observations.json";
 const DEFAULT_CSV_FILE: &str = "experiment_data.csv";
 const STATUS_SECONDS: i64 = 4;
 
@@ -368,18 +368,21 @@ impl LabApp {
     }
 
     fn save_molecules(&self) {
+        Self::ensure_parent_dir(&self.ui.molecules_file);
         if let Ok(json) = serde_json::to_string_pretty(&self.molecules_data) {
             let _ = fs::write(&self.ui.molecules_file, json);
         }
     }
 
     fn save_samples(&self) {
+        Self::ensure_parent_dir(&self.ui.samples_file);
         if let Ok(json) = serde_json::to_string_pretty(&self.samples_data) {
             let _ = fs::write(&self.ui.samples_file, json);
         }
     }
 
     fn save_observations(&self) {
+        Self::ensure_parent_dir(&self.ui.observations_file);
         if let Ok(json) = serde_json::to_string_pretty(&self.observations_data) {
             let _ = fs::write(&self.ui.observations_file, json);
         }
@@ -500,6 +503,12 @@ impl LabApp {
         ui.label("File:");
         ui.text_edit_singleline(current_path);
         changed
+    }
+
+    fn ensure_parent_dir(path: &str) {
+        if let Some(parent) = Path::new(path).parent() {
+            let _ = fs::create_dir_all(parent);
+        }
     }
 
     fn add_molecule(&mut self) {

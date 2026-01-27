@@ -1,9 +1,3 @@
 /.DS_Store
-/lab_notebook.json
 /target
-/molecules.json
-/samples.json
-/observations.json
-/molecules2.json
-/samples2.json
-/observations2.json
+/lab_data/

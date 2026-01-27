@@ -20,7 +20,7 @@ This app organises your experimental workflow into four tabs:
 3. **Testing** – log observations with temperature, phase, and notes.
 4. **History & Export** – review results and export to CSV.
 
-All data is stored locally as JSON files that you can swap in the UI.
+All data is stored locally as JSON files in `lab_data/` that you can swap in the UI.
 
 ---
 
@@ -53,20 +53,20 @@ The first build may take a few minutes. Once complete, the GUI opens.
 
 ## Data files (important)
 
-The app now uses **three separate JSON files** by default:
+The app now uses **three separate JSON files** by default (stored in `lab_data/`):
 
-- `molecules.json` – all molecule records and next molecule ID
-- `samples.json` – prepared samples and next sample ID
-- `observations.json` – phase observations and next observation ID
+- `lab_data/molecules.json` – all molecule records and next molecule ID
+- `lab_data/samples.json` – prepared samples and next sample ID
+- `lab_data/observations.json` – phase observations and next observation ID
 
 ### Switching files
 
 Each tab has a **“Change file…”** button and a file path field:
 
-- **Molecules tab** → selects the `molecules.json` file
-- **Weighting tab** → selects the `samples.json` file
-- **Testing tab** → selects the `observations.json` file
-- **History tab** → also controls the `observations.json` file
+- **Molecules tab** → selects the `lab_data/molecules.json` file
+- **Weighting tab** → selects the `lab_data/samples.json` file
+- **Testing tab** → selects the `lab_data/observations.json` file
+- **History tab** → also controls the `lab_data/observations.json` file
 
 This lets you keep multiple datasets and switch between them without copying files.
 
@@ -159,6 +159,6 @@ Recommended:
 - **Ignore**:
   - `target/` (build artefacts)
   - `.DS_Store` (macOS Finder metadata)
-  - `molecules.json`, `samples.json`, `observations.json` (personal data)
+  - `lab_data/` (personal data)
 
 
