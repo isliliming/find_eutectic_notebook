@@ -89,6 +89,14 @@ Date, Obs ID, Sample ID, Type, Component 1, Mass 1 (mg), Component 2, Mass 2 (mg
 
 ---
 
+## Building for test
+
+For testing, you can make a fast compile with:
+
+```bash
+cargo run
+```
+
 ## Building a release version
 
 For a fast, optimised build:
