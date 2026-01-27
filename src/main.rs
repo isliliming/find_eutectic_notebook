@@ -490,7 +490,7 @@ impl LabApp {
         if ui.button("Change file…").clicked() {
             if let Some(path) = FileDialog::new()
                 .add_filter("JSON", &["json"])
-                .set_file_name(current_path)
+                .set_file_name(current_path.as_str())
                 .pick_file()
             {
                 *current_path = path.to_string_lossy().to_string();
