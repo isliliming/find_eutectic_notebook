@@ -91,7 +91,7 @@ Date, Obs ID, Sample ID, Type, Component 1, Mass 1 (mg), Component 2, Mass 2 (mg
 
 ## Building for test
 
-For testing, you can make a fast compile with:
+For testing, you can make a fast compile. Run the following command in the root directory:
 
 ```bash
 cargo run
@@ -99,7 +99,7 @@ cargo run
 
 ## Building a release version
 
-For a fast, optimised build:
+For a fast, optimised build. Run the following command in the root directory:
 
 ```bash
 cargo build --release
