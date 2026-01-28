@@ -250,7 +250,7 @@ impl Tab {
     fn label(&self) -> &'static str {
         match self {
             Tab::Molecules => "1. Molecules",
-            Tab::Weighing => "2. Weighting",
+            Tab::Weighing => "2. Weighing",
             Tab::Testing => "3. Testing",
             Tab::History => "4. History & Export",
         }
@@ -361,23 +361,24 @@ impl LabApp {
         Self::ensure_parent_dir(&ui.samples_file);
         Self::ensure_parent_dir(&ui.observations_file);
         
-        let mut molecules_data = match fs::read_to_string(&ui.molecules_file) {
-            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-            Err(_) => MoleculesData::default(),
-        };
-        molecules_data.normalise_ids();
+        let molecules_data = Self::try_load_molecules(&ui.molecules_file).unwrap_or_else(|e| {
+            panic!(
+                "Failed to load molecules from {}: {}",
+                ui.molecules_file, e
+            )
+        });
 
-        let mut samples_data = match fs::read_to_string(&ui.samples_file) {
-            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-            Err(_) => SamplesData::default(),
-        };
-        samples_data.normalise_ids();
+        let samples_data = Self::try_load_samples(&ui.samples_file).unwrap_or_else(|e| {
+            panic!("Failed to load samples from {}: {}", ui.samples_file, e)
+        });
 
-        let mut observations_data = match fs::read_to_string(&ui.observations_file) {
-            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-            Err(_) => ObservationsData::default(),
-        };
-        observations_data.normalise_ids();
+        let observations_data = Self::try_load_observations(&ui.observations_file)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to load observations from {}: {}",
+                    ui.observations_file, e
+                )
+            });
 
         let app = Self {
             molecules_data,
@@ -388,6 +389,33 @@ impl LabApp {
         };
         app.save_all_data();
         app
+    }
+
+    fn try_load_molecules(path: &str) -> Result<MoleculesData, String> {
+        let mut data: MoleculesData = match fs::read_to_string(path) {
+            Ok(content) => serde_json::from_str(&content).map_err(|e| e.to_string())?,
+            Err(_) => MoleculesData::default(),
+        };
+        data.normalise_ids();
+        Ok(data)
+    }
+
+    fn try_load_samples(path: &str) -> Result<SamplesData, String> {
+        let mut data: SamplesData = match fs::read_to_string(path) {
+            Ok(content) => serde_json::from_str(&content).map_err(|e| e.to_string())?,
+            Err(_) => SamplesData::default(),
+        };
+        data.normalise_ids();
+        Ok(data)
+    }
+
+    fn try_load_observations(path: &str) -> Result<ObservationsData, String> {
+        let mut data: ObservationsData = match fs::read_to_string(path) {
+            Ok(content) => serde_json::from_str(&content).map_err(|e| e.to_string())?,
+            Err(_) => ObservationsData::default(),
+        };
+        data.normalise_ids();
+        Ok(data)
     }
 
     fn save_molecules(&self) {
@@ -417,29 +445,6 @@ impl LabApp {
         self.save_observations();
     }
 
-    fn load_molecules(&mut self) {
-        self.molecules_data = match fs::read_to_string(&self.ui.molecules_file) {
-            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-            Err(_) => MoleculesData::default(),
-        };
-        self.molecules_data.normalise_ids();
-    }
-
-    fn load_samples(&mut self) {
-        self.samples_data = match fs::read_to_string(&self.ui.samples_file) {
-            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-            Err(_) => SamplesData::default(),
-        };
-        self.samples_data.normalise_ids();
-    }
-
-    fn load_observations(&mut self) {
-        self.observations_data = match fs::read_to_string(&self.ui.observations_file) {
-            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-            Err(_) => ObservationsData::default(),
-        };
-        self.observations_data.normalise_ids();
-    }
 
     fn show_status(&mut self, msg: impl Into<String>, kind: StatusKind) {
         self.status = Some(StatusMessage {
@@ -844,12 +849,24 @@ impl LabApp {
             ui.horizontal(|ui| {
                 ui.heading("Molecules");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let old_path = self.ui.molecules_file.clone();
                     if Self::file_selector_row(ui, &mut self.ui.molecules_file) {
-                        self.load_molecules();
-                        self.ui.prep_c1_id = None;
-                        self.ui.prep_c2_id = None;
-                        self.ui.prep_theoretical_text.clear();
-                        self.show_status("Molecules file loaded.", StatusKind::Ok);
+                        match Self::try_load_molecules(&self.ui.molecules_file) {
+                            Ok(data) => {
+                                self.molecules_data = data;
+                                self.ui.prep_c1_id = None;
+                                self.ui.prep_c2_id = None;
+                                self.ui.prep_theoretical_text.clear();
+                                self.show_status("Molecules file loaded.", StatusKind::Ok);
+                            }
+                            Err(e) => {
+                                self.show_status(
+                                    format!("Error loading file: {}", e),
+                                    StatusKind::Error,
+                                );
+                                self.ui.molecules_file = old_path;
+                            }
+                        }
                     }
                 });
             });
@@ -967,12 +984,24 @@ impl LabApp {
     fn tab_weighing(&mut self, ui: &mut egui::Ui) {
         egui::Frame::group(ui.style()).show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.heading("Sample Preparation / Weighting");
+                ui.heading("Sample Preparation / Weighing");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let old_path = self.ui.samples_file.clone();
                     if Self::file_selector_row(ui, &mut self.ui.samples_file) {
-                        self.load_samples();
-                        self.ui.test_selected_sample_id = None;
-                        self.show_status("Samples file loaded.", StatusKind::Ok);
+                        match Self::try_load_samples(&self.ui.samples_file) {
+                            Ok(data) => {
+                                self.samples_data = data;
+                                self.ui.test_selected_sample_id = None;
+                                self.show_status("Samples file loaded.", StatusKind::Ok);
+                            }
+                            Err(e) => {
+                                self.show_status(
+                                    format!("Error loading file: {}", e),
+                                    StatusKind::Error,
+                                );
+                                self.ui.samples_file = old_path;
+                            }
+                        }
                     }
                 });
             });
@@ -1228,10 +1257,22 @@ impl LabApp {
             ui.horizontal(|ui| {
                 ui.heading("Phase Observation");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let old_path = self.ui.observations_file.clone();
                     if Self::file_selector_row(ui, &mut self.ui.observations_file) {
-                        self.load_observations();
-                        self.ui.export_selected_obs_ids.clear();
-                        self.show_status("Observations file loaded.", StatusKind::Ok);
+                        match Self::try_load_observations(&self.ui.observations_file) {
+                            Ok(data) => {
+                                self.observations_data = data;
+                                self.ui.export_selected_obs_ids.clear();
+                                self.show_status("Observations file loaded.", StatusKind::Ok);
+                            }
+                            Err(e) => {
+                                self.show_status(
+                                    format!("Error loading file: {}", e),
+                                    StatusKind::Error,
+                                );
+                                self.ui.observations_file = old_path;
+                            }
+                        }
                     }
                 });
             });
@@ -1308,10 +1349,22 @@ impl LabApp {
             ui.horizontal(|ui| {
                 ui.heading("Experiment History");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let old_path = self.ui.observations_file.clone();
                     if Self::file_selector_row(ui, &mut self.ui.observations_file) {
-                        self.load_observations();
-                        self.ui.export_selected_obs_ids.clear();
-                        self.show_status("Observations file loaded.", StatusKind::Ok);
+                        match Self::try_load_observations(&self.ui.observations_file) {
+                            Ok(data) => {
+                                self.observations_data = data;
+                                self.ui.export_selected_obs_ids.clear();
+                                self.show_status("Observations file loaded.", StatusKind::Ok);
+                            }
+                            Err(e) => {
+                                self.show_status(
+                                    format!("Error loading file: {}", e),
+                                    StatusKind::Error,
+                                );
+                                self.ui.observations_file = old_path;
+                            }
+                        }
                     }
                     ui.separator();
                     if ui.button("Export selected…").clicked() {

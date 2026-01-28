@@ -16,7 +16,7 @@ It helps you:
 This app organises your experimental workflow into four tabs:
 
 1. **Molecules** – register and search chemicals.
-2. **Weighting** – prepare samples (binary or pure) with real ratios.
+2. **Weighing** – prepare samples (binary or pure) with real ratios.
 3. **Testing** – log observations with temperature, phase, and notes.
 4. **History & Export** – review results and export to CSV.
 
@@ -64,7 +64,7 @@ The app now uses **three separate JSON files** by default (stored in `lab_data/`
 Each tab has a **“Change file…”** button and a file path field:
 
 - **Molecules tab** → selects the `lab_data/molecules.json` file
-- **Weighting tab** → selects the `lab_data/samples.json` file
+- **Weighing tab** → selects the `lab_data/samples.json` file
 - **Testing tab** → selects the `lab_data/observations.json` file
 - **History tab** → also controls the `lab_data/observations.json` file
 
