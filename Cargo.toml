@@ -1,6 +1,6 @@
 [package]
 name = "eutectic_lab_notebook"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2021"
 
 [[bin]]

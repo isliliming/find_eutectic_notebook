@@ -1,0 +1,31 @@
+name: Build for Windows
+
+# Triggers the build whenever you push to main
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # Allows you to manually trigger the build button
+
+jobs:
+  build:
+    name: Build Windows Exe
+    runs-on: windows-latest  # This creates a Windows environment!
+
+    steps:
+      # 1. Download your code
+      - uses: actions/checkout@v4
+
+      # 2. Install the latest stable Rust
+      - uses: dtolnay/rust-toolchain@stable
+
+      # 3. Compile the project in release mode (optimized)
+      - name: Build Release
+        run: cargo build --release
+
+      # 4. Save the .exe file so you can download it
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-App
+          path: target/release/*.exe
+          if-no-files-found: error
