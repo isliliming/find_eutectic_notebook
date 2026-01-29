@@ -1323,14 +1323,42 @@ impl LabApp {
             ui.add_space(8.0);
 
             if let Some(sample_id) = self.ui.test_selected_sample_id {
-                let summary = self
-                    .samples_data
-                    .samples
-                    .iter()
-                    .find(|s| s.id == sample_id)
-                    .map(|s| Self::sample_label(s))
-                    .unwrap_or_else(|| "Sample not found".to_string());
-                ui.label(summary);
+                let sample_opt = self.samples_data.samples.iter().find(|s| s.id == sample_id);
+                if let Some(sample) = sample_opt {
+                    ui.label(Self::sample_label(sample));
+
+                    let get_mp = |id: u32| -> String {
+                        self.molecules_data
+                            .molecules
+                            .iter()
+                            .find(|m| m.id == id)
+                            .and_then(|m| m.melting_point)
+                            .map(|mp| format!("{:.1} °C", mp))
+                            .unwrap_or_else(|| "Unknown".to_string())
+                    };
+
+                    match sample.type_ {
+                        SampleType::Pure => {
+                            let mp = get_mp(sample.c1_id);
+                            ui.label(format!("Melting Point: {} ({})", mp, sample.c1_name));
+                        }
+                        SampleType::Binary => {
+                            let mp1 = get_mp(sample.c1_id);
+                            let c2_name = sample.c2_name.as_deref().unwrap_or("?");
+                            let mp2 = if let Some(c2_id) = sample.c2_id {
+                                get_mp(c2_id)
+                            } else {
+                                "Unknown".to_string()
+                            };
+                            ui.label(format!(
+                                "Melting Points: {} ({}) + {} ({})",
+                                mp1, sample.c1_name, mp2, c2_name
+                            ));
+                        }
+                    }
+                } else {
+                    ui.label("Sample not found");
+                }
 
                 ui.add_space(6.0);
                 egui::Grid::new("test_form")
