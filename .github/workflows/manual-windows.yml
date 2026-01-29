@@ -1,0 +1,28 @@
+name: Manual Windows Build
+
+# 1. This ensures it ONLY runs when you physically click the button
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # 2. Build the project
+      # Cargo reads your Cargo.toml automatically to determine the output name
+      - name: Build Release
+        run: cargo build --release
+
+      # 3. Upload the result
+      # The *.exe wildcard grabs whatever file Cargo created, 
+      # so you never have to type the name manually here.
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-App
+          path: target/release/*.exe
+          if-no-files-found: error
