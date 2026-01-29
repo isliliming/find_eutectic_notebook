@@ -476,13 +476,11 @@ impl LabApp {
         input.trim().parse::<f64>().ok()
     }
 
-    fn molecules_by_role(&self, role: Role) -> Vec<(u32, String)> {
-        self.molecules_data
-            .molecules
+    fn molecules_by_role(data: &MoleculesData, role: Role) -> impl Iterator<Item = (u32, &str)> {
+        data.molecules
             .iter()
-            .filter(|m| m.role == role)
-            .map(|m| (m.id, m.short_name.clone()))
-            .collect()
+            .filter(move |m| m.role == role)
+            .map(|m| (m.id, m.short_name.as_str()))
     }
 
     fn sample_label(sample: &Sample) -> String {
@@ -1018,8 +1016,8 @@ impl LabApp {
 
             match self.ui.prep_mode {
                 SampleType::Binary => {
-                    let acc_opts = self.molecules_by_role(Role::HBA);
-                    let don_opts = self.molecules_by_role(Role::HBD);
+                    let acc_opts = Self::molecules_by_role(&self.molecules_data, Role::HBA);
+                    let don_opts = Self::molecules_by_role(&self.molecules_data, Role::HBD);
 
                     let acc_label = self
                         .molecules_data
