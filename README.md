@@ -4,7 +4,7 @@ A beginner‑friendly desktop laboratory notebook for **binary eutectic systems*
 
 It helps you:
 
-- Manage **molecule metadata** (HBA/HBD, CAS, MW, supplier, etc.).
+- Manage **molecule metadata** (HBA/HBD, CAS, MW, melting point, supplier, etc.).
 - Prepare **binary mixtures** and **pure samples** with real molar ratios.
 - Record **phase behaviour** (liquid/solid vs temperature) with notes.
 - Export **selected or all** experiments to CSV for analysis.
@@ -15,7 +15,7 @@ It helps you:
 
 This app organises your experimental workflow into four tabs:
 
-1. **Molecules** – register and search chemicals.
+1. **Molecules** – register and search chemicals (including melting point).
 2. **Weighing** – prepare samples (binary or pure) with real ratios.
 3. **Testing** – log observations with temperature, phase, and notes.
 4. **History & Export** – review results and export to CSV.

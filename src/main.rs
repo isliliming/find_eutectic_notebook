@@ -105,6 +105,7 @@ struct Molecule {
     short_name: String,
     cas_number: String,
     mw: f64,
+    melting_point: Option<f64>,
     role: Role,
     supplier: String,
     sku: String,
@@ -281,6 +282,7 @@ struct UiState {
     new_mol_short: String,
     new_mol_cas: String,
     new_mol_mw: String,
+    new_mol_melting_point: String,
     new_mol_role: Role,
     new_mol_supplier: String,
     new_mol_sku: String,
@@ -316,6 +318,7 @@ impl Default for UiState {
             new_mol_short: String::new(),
             new_mol_cas: String::new(),
             new_mol_mw: String::new(),
+            new_mol_melting_point: String::new(),
             new_mol_role: Role::HBA,
             new_mol_supplier: String::new(),
             new_mol_sku: String::new(),
@@ -544,6 +547,7 @@ impl LabApp {
         let short = self.ui.new_mol_short.trim();
         let cas = self.ui.new_mol_cas.trim();
         let mw = Self::parse_f64(&self.ui.new_mol_mw);
+        let melting_point = Self::parse_f64(&self.ui.new_mol_melting_point);
 
         if name.is_empty() {
             self.show_status("Name is required.", StatusKind::Error);
@@ -561,12 +565,15 @@ impl LabApp {
             }
         };
 
+        let melting_point = melting_point.and_then(|mp| if mp > 0.0 { Some(mp) } else { None });
+
         let molecule = Molecule {
             id: self.molecules_data.alloc_mol_id(),
             name: name.to_string(),
             short_name: short.to_string(),
             cas_number: cas.to_string(),
             mw,
+            melting_point,
             role: self.ui.new_mol_role,
             supplier: self.ui.new_mol_supplier.trim().to_string(),
             sku: self.ui.new_mol_sku.trim().to_string(),
@@ -581,6 +588,7 @@ impl LabApp {
         self.ui.new_mol_short.clear();
         self.ui.new_mol_cas.clear();
         self.ui.new_mol_mw.clear();
+        self.ui.new_mol_melting_point.clear();
         self.ui.new_mol_supplier.clear();
         self.ui.new_mol_sku.clear();
         self.ui.new_mol_link.clear();
@@ -894,6 +902,10 @@ impl LabApp {
                     ui.text_edit_singleline(&mut self.ui.new_mol_mw);
                     ui.end_row();
 
+                    ui.label("Melting point (°C)");
+                    ui.text_edit_singleline(&mut self.ui.new_mol_melting_point);
+                    ui.end_row();
+
                     ui.label("Role");
                     ui.horizontal(|ui| {
                         ui.radio_value(&mut self.ui.new_mol_role, Role::HBA, Role::HBA.label());
@@ -942,6 +954,7 @@ impl LabApp {
                         ui.strong("Short");
                         ui.strong("CAS");
                         ui.strong("MW");
+                        ui.strong("Melting Point (°C)");
                         ui.strong("Role");
                         ui.strong("Supplier");
                         ui.strong("Webpage");
@@ -958,6 +971,11 @@ impl LabApp {
                             ui.label(&mol.short_name);
                             ui.label(&mol.cas_number);
                             ui.label(format!("{:.3}", mol.mw));
+                            ui.label(
+                                mol.melting_point
+                                    .map(|mp| format!("{:.1}", mp))
+                                    .unwrap_or_else(|| "-".to_string()),
+                            );
                             ui.label(mol.role.short());
                             ui.label(&mol.supplier);
                             if !mol.webpage.is_empty() {
