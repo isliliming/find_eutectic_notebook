@@ -743,6 +743,7 @@ impl LabApp {
                 Some(note.to_string())
             },
         });
+        self.ui.test_note.clear();
         self.save_observations();
         self.show_status("Observation recorded.", StatusKind::Ok);
     }
