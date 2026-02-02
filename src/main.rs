@@ -557,6 +557,19 @@ impl LabApp {
             self.show_status("Short name is required.", StatusKind::Error);
             return;
         }
+        if !cas.is_empty()
+            && self
+                .molecules_data
+                .molecules
+                .iter()
+                .any(|m| m.cas_number.trim().eq_ignore_ascii_case(cas))
+        {
+            self.show_status(
+                "A molecule with this CAS number is already registered.",
+                StatusKind::Error,
+            );
+            return;
+        }
         let mw = match mw {
             Some(value) if value > 0.0 => value,
             _ => {
@@ -953,6 +966,7 @@ impl LabApp {
                     .spacing([12.0, 6.0])
                     .show(ui, |ui| {
                         ui.strong("Short");
+                        ui.strong("Name");
                         ui.strong("CAS");
                         ui.strong("MW");
                         ui.strong("Melting Point (°C)");
@@ -970,6 +984,7 @@ impl LabApp {
                                 || m.cas_number.to_lowercase().contains(&query)
                         }) {
                             ui.label(&mol.short_name);
+                            ui.label(&mol.name);
                             ui.label(&mol.cas_number);
                             ui.label(format!("{:.3}", mol.mw));
                             ui.label(
