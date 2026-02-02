@@ -120,10 +120,14 @@ struct Sample {
 
     c1_id: u32,
     c1_name: String,
+    #[serde(default)]
+    c1_cas: String,
     c1_mass: f64,
 
     c2_id: Option<u32>,
     c2_name: Option<String>,
+    #[serde(default)]
+    c2_cas: Option<String>,
     c2_mass: Option<f64>,
 
     ratio_label: String,
@@ -141,6 +145,8 @@ struct Observation {
     timestamp: DateTime<Utc>,
     #[serde(default)]
     note: Option<String>,
+    #[serde(default)]
+    sample_snapshot: Option<Sample>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -627,17 +633,30 @@ impl LabApp {
             return;
         }
 
-        let (c1_id, c1_name, c1_mw) = match self.molecules_data.molecules.iter().find(|m| m.id == c1_id)
+        let (c1_id, c1_name, c1_cas, c1_mw) = match self
+            .molecules_data
+            .molecules
+            .iter()
+            .find(|m| m.id == c1_id)
         {
-            Some(m) => (m.id, m.short_name.clone(), m.mw),
+            Some(m) => (m.id, m.short_name.clone(), m.cas_number.clone(), m.mw),
             None => {
                 self.show_status("Acceptor not found.", StatusKind::Error);
                 return;
             }
         };
-        let (c2_id, c2_name, c2_mw) = match self.molecules_data.molecules.iter().find(|m| m.id == c2_id)
+        let (c2_id, c2_name, c2_cas, c2_mw) = match self
+            .molecules_data
+            .molecules
+            .iter()
+            .find(|m| m.id == c2_id)
         {
-            Some(m) => (m.id, m.short_name.clone(), m.mw),
+            Some(m) => (
+                m.id,
+                m.short_name.clone(),
+                m.cas_number.clone(),
+                m.mw,
+            ),
             None => {
                 self.show_status("Donor not found.", StatusKind::Error);
                 return;
@@ -675,9 +694,11 @@ impl LabApp {
             type_: SampleType::Binary,
             c1_id,
             c1_name,
+            c1_cas,
             c1_mass: mass1,
             c2_id: Some(c2_id),
             c2_name: Some(c2_name),
+            c2_cas: Some(c2_cas),
             c2_mass: Some(mass2),
             ratio_label,
             real_molar_ratio: real_ratio,
@@ -698,8 +719,13 @@ impl LabApp {
                 return;
             }
         };
-        let (c1_id, c1_name) = match self.molecules_data.molecules.iter().find(|m| m.id == c1_id) {
-            Some(m) => (m.id, m.short_name.clone()),
+        let (c1_id, c1_name, c1_cas) = match self
+            .molecules_data
+            .molecules
+            .iter()
+            .find(|m| m.id == c1_id)
+        {
+            Some(m) => (m.id, m.short_name.clone(), m.cas_number.clone()),
             None => {
                 self.show_status("Selected molecule not found.", StatusKind::Error);
                 return;
@@ -719,9 +745,11 @@ impl LabApp {
             type_: SampleType::Pure,
             c1_id,
             c1_name,
+            c1_cas,
             c1_mass: mass,
             c2_id: None,
             c2_name: None,
+            c2_cas: None,
             c2_mass: None,
             ratio_label: "Pure".to_string(),
             real_molar_ratio: None,
@@ -743,6 +771,12 @@ impl LabApp {
         };
 
         let obs_id = self.observations_data.alloc_obs_id();
+        let sample_snapshot = self
+            .samples_data
+            .samples
+            .iter()
+            .find(|s| s.id == sample_id)
+            .cloned();
         let note = self.ui.test_note.trim();
         self.observations_data.observations.push(Observation {
             id: obs_id,
@@ -755,6 +789,7 @@ impl LabApp {
             } else {
                 Some(note.to_string())
             },
+            sample_snapshot,
         });
         self.ui.test_note.clear();
         self.save_observations();
@@ -793,8 +828,14 @@ impl LabApp {
             let temp_str = format!("{:.2}", obs.temperature);
             let result_str = obs.result.label().to_string();
 
-            let row = if let Some(sample) = self.samples_data.samples.iter().find(|s| s.id == obs.sample_id)
-            {
+            let sample_ref: Option<&Sample> = self
+                .samples_data
+                .samples
+                .iter()
+                .find(|s| s.id == obs.sample_id)
+                .or_else(|| obs.sample_snapshot.as_ref());
+
+            let row = if let Some(sample) = sample_ref {
                 let type_str = sample.type_.label().to_string();
                 let c2_name = sample.c2_name.clone().unwrap_or_default();
                 let c2_mass = sample
