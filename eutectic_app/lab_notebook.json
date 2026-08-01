@@ -1,0 +1,87 @@
+{
+  "molecules": [
+    {
+      "id": 1,
+      "name": "Curcums",
+      "short_name": "cur",
+      "cas_number": "798-89",
+      "mw": 234.45,
+      "role": "HBA",
+      "supplier": "fvs",
+      "sku": "fs",
+      "webpage": "fsdf"
+    },
+    {
+      "id": 2,
+      "name": "Bifozna",
+      "short_name": "bif",
+      "cas_number": "3254-42",
+      "mw": 120.09,
+      "role": "HBD",
+      "supplier": "ad",
+      "sku": "da",
+      "webpage": "da"
+    }
+  ],
+  "samples": [
+    {
+      "id": 1,
+      "type_": "Binary",
+      "c1_id": 1,
+      "c1_name": "cur",
+      "c1_mass": 34.89,
+      "c2_id": 2,
+      "c2_name": "bif",
+      "c2_mass": 25.89,
+      "ratio_label": "4:6",
+      "real_molar_ratio": 1.4486867007955555,
+      "created_at": "2026-01-26T22:19:02.207642Z"
+    },
+    {
+      "id": 2,
+      "type_": "Binary",
+      "c1_id": 1,
+      "c1_name": "cur",
+      "c1_mass": 78.0,
+      "c2_id": 2,
+      "c2_name": "bif",
+      "c2_mass": 155.0,
+      "ratio_label": "2:8",
+      "real_molar_ratio": 3.87954226637714,
+      "created_at": "2026-01-26T22:35:26.509183Z"
+    }
+  ],
+  "observations": [
+    {
+      "id": 1,
+      "sample_id": 1,
+      "temperature": 25.0,
+      "result": "Solid",
+      "timestamp": "2026-01-26T22:19:18.111542Z"
+    },
+    {
+      "id": 2,
+      "sample_id": 1,
+      "temperature": 150.0,
+      "result": "Liquid",
+      "timestamp": "2026-01-26T22:19:24.327208Z"
+    },
+    {
+      "id": 3,
+      "sample_id": 2,
+      "temperature": 200.0,
+      "result": "Liquid",
+      "timestamp": "2026-01-26T22:35:42.092719Z"
+    },
+    {
+      "id": 4,
+      "sample_id": 2,
+      "temperature": 150.0,
+      "result": "Solid",
+      "timestamp": "2026-01-26T22:35:45.716615Z"
+    }
+  ],
+  "next_mol_id": 3,
+  "next_sample_id": 3,
+  "next_obs_id": 5
+}

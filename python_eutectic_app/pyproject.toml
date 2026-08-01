@@ -1,0 +1,11 @@
+[project]
+name = "python-eutectic-app"
+version = "1.0.0"
+description = "A beginner-friendly desktop notebook for binary eutectic experiments"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = []
+
+[tool.uv]
+package = false
+python-preference = "only-system"
